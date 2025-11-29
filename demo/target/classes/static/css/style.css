@@ -8,9 +8,8 @@ body {
     background-color: #fcfcfc;
 }
 
-.text-pink {
-    color: var(--anime-pink-hover) !important;
-}
+.text-pink { color: var(--anime-pink-hover) !important; }
+.bg-pink { background-color: var(--anime-pink) !important; }
 
 .btn-pink {
     background-color: var(--anime-pink);
@@ -31,4 +30,9 @@ body {
 
 .bg-pink-gradient {
     background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+}
+
+/* 进度条 */
+.progress-bar {
+    background-color: var(--anime-pink);
 }

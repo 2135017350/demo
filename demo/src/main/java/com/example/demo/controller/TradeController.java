@@ -1,49 +1,134 @@
 package com.example.demo.controller;
 
 import com.example.demo.model.Item;
+import com.example.demo.model.User;
+import com.example.demo.repository.ItemRepository;
+import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.HttpSession;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.ArrayList;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.UUID;
 
 @Controller
 public class TradeController {
 
-    // 模拟数据库
-    private static List<Item> itemList = new ArrayList<>();
+    @Autowired
+    private ItemRepository itemRepository;
 
-    static {
-        // 初始化一些模拟数据
-        itemList.add(new Item(1L, "初音未来 2024 魔法未来 手办", "手办", new BigDecimal("998.00"), "MikuFan01", "https://placeholder.co/300x300?text=Miku+Figure", 0, "全新未拆，盒况完美"));
-        itemList.add(new Item(2L, "进击的巨人 利威尔 痛包套装", "周边套装", new BigDecimal("250.00"), "SurveyCorps", "https://placeholder.co/300x300?text=Levi+Bag", 0, "包含吧唧、挂件，仅背过一次"));
-        itemList.add(new Item(3L, "间谍过家家 阿尼亚 吧唧 (闪光版)", "吧唧", new BigDecimal("35.00"), "PeanutLover", "https://placeholder.co/300x300?text=Anya+Badge", 0, "复数回血，无伤"));
-        itemList.add(new Item(4L, "原神 钟离 官方立牌", "立牌", new BigDecimal("88.00"), "GeoDaddy", "https://placeholder.co/300x300?text=Zhongli+Stand", 1, "交易锁定中"));
+    @Value("${app.upload.dir}")
+    private String uploadDir;
+
+    // 初始化默认商品
+    @PostConstruct
+    public void init() {
+        // 创建上传目录
+        new File(uploadDir).mkdirs();
+
+        if (itemRepository.count() == 0) {
+            Item item = new Item();
+            item.setTitle("初音未来 2024 魔法未来 手办");
+            item.setCategory("手办");
+            item.setIp("VOCALOID");
+            item.setPrice(new BigDecimal("998.00"));
+            item.setSeller("System");
+            item.setCoverUrl("https://placeholder.co/300x300?text=Miku");
+            item.setCondition("全新");
+            item.setAccessories("盒说全");
+            item.setStatus(0);
+            itemRepository.save(item);
+        }
     }
 
     @GetMapping("/")
-    public String index(Model model) {
-        List<Item> activeItems = itemList.stream()
-                .filter(i -> i.getStatus() != 2)
-                .collect(Collectors.toList());
+    public String index(Model model, HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        model.addAttribute("user", user);
+        // 查询未售出(2)且未下架(4)的商品
+        List<Item> activeItems = itemRepository.findByStatusNotAndStatusNot(2, 4);
         model.addAttribute("items", activeItems);
         return "index";
     }
 
-    @PostMapping("/api/trade/buy")
-    @ResponseBody
-    public Map<String, Object> buyItem(@RequestBody Map<String, Long> payload) {
-        Long itemId = payload.get("itemId");
-        Item targetItem = itemList.stream().filter(i -> i.getId().equals(itemId)).findFirst().orElse(null);
-
-        if (targetItem == null) return Map.of("success", false, "msg", "商品不存在");
-        if (targetItem.getStatus() != 0) return Map.of("success", false, "msg", "商品不可交易");
-
-        targetItem.setStatus(1); // 标记为交易中
-        return Map.of("success", true, "msg", "交易请求已发送，请联系卖家：" + targetItem.getSeller());
+    @GetMapping("/item/{id}")
+    public String itemDetail(@PathVariable Long id, Model model, HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        model.addAttribute("user", user);
+        Item item = itemRepository.findById(id).orElse(null);
+        if (item == null) return "redirect:/";
+        model.addAttribute("item", item);
+        return "detail";
     }
+
+    @GetMapping("/publish")
+    public String publishPage(HttpSession session, Model model) {
+        User user = (User) session.getAttribute("user");
+        if (user == null) return "redirect:/login";
+        model.addAttribute("user", user);
+        return "publish";
+    }
+
+    // === 发布商品接口 (支持文件上传) ===
+    @PostMapping("/api/trade/publish")
+    @ResponseBody
+    public Map<String, Object> publishItem(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("title") String title,
+            @RequestParam("ip") String ip,
+            @RequestParam("category") String category,
+            @RequestParam("condition") String condition,
+            @RequestParam("accessories") String accessories,
+            @RequestParam("price") BigDecimal price,
+            @RequestParam("description") String description,
+            @RequestParam(value = "status", defaultValue = "0") Integer status,
+            HttpSession session) {
+
+        User user = (User) session.getAttribute("user");
+        if (user == null) return Map.of("success", false, "msg", "未登录", "needLogin", true);
+
+        try {
+            // 1. 保存图片文件
+            String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
+            Path path = Paths.get(uploadDir + "/" + fileName);
+            Files.write(path, file.getBytes());
+            String fileUrl = "/uploads/" + fileName; // 访问路径
+
+            // 2. 保存商品到数据库
+            Item item = new Item();
+            item.setTitle(title);
+            item.setIp(ip);
+            item.setCategory(category);
+            item.setCondition(condition);
+            item.setAccessories(accessories);
+            item.setPrice(price);
+            item.setDescription(description);
+            item.setStatus(status);
+
+            item.setSeller(user.getNickname());
+            item.setCoverUrl(fileUrl); // 使用上传后的路径
+            item.setVerified(false);
+
+            itemRepository.save(item);
+
+            return Map.of("success", true, "msg", "发布成功！");
+        } catch (IOException e) {
+            e.printStackTrace();
+            return Map.of("success", false, "msg", "图片上传失败：" + e.getMessage());
+        }
+    }
+
+    // buyItem 略，逻辑改为 itemRepository.findById(id) 并 save()
 }

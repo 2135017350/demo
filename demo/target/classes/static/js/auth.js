@@ -1,7 +1,6 @@
-// auth.js - 处理登录和注册
 $(document).ready(function() {
 
-    // 登录表单提交
+    // 登录表单提交 (逻辑不变，后端Controller处理了多账号类型的判断)
     $('#loginForm').on('submit', function(e) {
         e.preventDefault();
         const data = {
@@ -26,13 +25,15 @@ $(document).ready(function() {
         });
     });
 
-    // 注册表单提交
+    // 注册表单提交 (新增字段收集)
     $('#registerForm').on('submit', function(e) {
         e.preventDefault();
         const data = {
             username: $('input[name="username"]').val(),
-            password: $('input[name="password"]').val(),
-            nickname: $('input[name="nickname"]').val()
+            nickname: $('input[name="nickname"]').val(),
+            phone: $('input[name="phone"]').val(), // 新增
+            email: $('input[name="email"]').val(), // 新增
+            password: $('input[name="password"]').val()
         };
 
         $.ajax({
