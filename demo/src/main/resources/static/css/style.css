@@ -1,38 +1,150 @@
 :root {
-    --anime-pink: #ff8fa3;
-    --anime-pink-hover: #ff6b81;
+    --anime-primary: #ff8fa3;       /* 主色调：樱花粉 */
+    --anime-primary-dark: #ff6b81;  /* 深粉色 */
+    --anime-secondary: #a3d8ff;     /* 辅助色：天空蓝 */
+    --anime-bg: #fdfdfd;            /* 背景色 */
+    --anime-card-bg: #ffffff;
+    --text-main: #2c3e50;
+    --text-muted: #95a5a6;
 }
 
 body {
-    font-family: 'Segoe UI', sans-serif;
-    background-color: #fcfcfc;
+    font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background-color: var(--anime-bg);
+    color: var(--text-main);
+    overflow-x: hidden;
 }
 
-.text-pink { color: var(--anime-pink-hover) !important; }
-.bg-pink { background-color: var(--anime-pink) !important; }
-
-.btn-pink {
-    background-color: var(--anime-pink);
-    border-color: var(--anime-pink);
-    color: white;
+/* === 导航栏 === */
+.navbar {
+    background-color: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
 }
 
-.btn-pink:hover {
-    background-color: var(--anime-pink-hover);
+.navbar-brand {
+    font-size: 1.4rem;
+    letter-spacing: 1px;
+}
+
+/* === Hero Banner (顶部大横幅) === */
+.hero-section {
+    background: linear-gradient(120deg, #fccb90 0%, #d57eeb 100%);
+    border-radius: 20px;
+    padding: 3rem 2rem;
+    position: relative;
+    overflow: hidden;
     color: white;
-    transform: translateY(-2px);
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 25px -5px rgba(213, 126, 235, 0.4);
+}
+
+/* 装饰性背景圆圈 */
+.hero-circle {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+}
+
+/* === 筛选栏 === */
+.filter-bar {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    scrollbar-width: none; /* Firefox隐藏滚动条 */
+}
+.filter-bar::-webkit-scrollbar { display: none; }
+
+.filter-btn {
+    border: 1px solid #eee;
+    background: white;
+    color: var(--text-main);
+    border-radius: 50px;
+    padding: 0.5rem 1.2rem;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.filter-btn:hover {
+    background: #fff0f3;
+    border-color: var(--anime-primary);
+    color: var(--anime-primary-dark);
+}
+
+.filter-btn.active {
+    background: var(--anime-primary);
+    color: white;
+    border-color: var(--anime-primary);
+    box-shadow: 0 4px 10px rgba(255, 143, 163, 0.4);
+}
+
+/* === 商品卡片 === */
+.item-card {
+    border-radius: 15px;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    background: var(--anime-card-bg);
+}
+
+.item-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.08) !important;
+}
+
+.card-img-wrapper {
+    position: relative;
+    width: 100%;
+    padding-top: 100%; /* 1:1 Aspect Ratio */
+    overflow: hidden;
 }
 
 .item-img {
-    height: 200px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     object-fit: cover;
+    transition: transform 0.5s ease;
 }
 
-.bg-pink-gradient {
-    background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+.item-card:hover .item-img {
+    transform: scale(1.05); /* 图片轻微放大 */
 }
 
-/* 进度条 */
-.progress-bar {
-    background-color: var(--anime-pink);
+.price-tag {
+    font-family: 'Verdana', sans-serif;
+    color: var(--anime-primary-dark);
+}
+
+/* === 工具类 === */
+.text-pink { color: var(--anime-primary-dark) !important; }
+.bg-pink { background-color: var(--anime-primary) !important; }
+
+.btn-pink {
+    background-color: var(--anime-primary);
+    border: none;
+    color: white;
+    padding: 8px 20px;
+    transition: all 0.3s;
+}
+
+.btn-pink:hover {
+    background-color: var(--anime-primary-dark);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 107, 129, 0.3);
+}
+
+.btn-outline-pink {
+    color: var(--anime-primary-dark);
+    border-color: var(--anime-primary-dark);
+}
+.btn-outline-pink:hover {
+    background-color: var(--anime-primary-dark);
+    color: white;
 }

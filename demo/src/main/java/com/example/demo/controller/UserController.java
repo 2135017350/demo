@@ -2,14 +2,12 @@ package com.example.demo.controller;
 
 import com.example.demo.model.User;
 import com.example.demo.repository.UserRepository;
-import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Arrays;
 import java.util.Map;
 
 @Controller
@@ -18,21 +16,7 @@ public class UserController {
     @Autowired
     private UserRepository userRepository;
 
-    // 初始化默认管理员账号 (如果数据库为空)
-    @PostConstruct
-    public void init() {
-        if (userRepository.count() == 0) {
-            User admin = new User();
-            admin.setUsername("admin");
-            admin.setPassword("123456");
-            admin.setNickname("超级管理员");
-            admin.setAvatar("https://placeholder.co/100x100/ff8fa3/ffffff?text=Admin");
-            admin.setVerified(true);
-            admin.setCreditScore(999);
-            admin.setBadges(Arrays.asList("官方认证"));
-            userRepository.save(admin);
-        }
-    }
+    // [已删除] init() 方法已移至 DataInitializer.java 以修复启动报错
 
     @GetMapping("/login")
     public String loginPage() { return "login"; }
@@ -95,5 +79,31 @@ public class UserController {
         return Map.of("success", true, "msg", "注册成功，请登录");
     }
 
-    // 省略 updateProfile，逻辑同上，改为 userRepository.save(user)
+    // 资料更新接口
+    @PostMapping("/api/profile/update")
+    @ResponseBody
+    public Map<String, Object> updateProfile(@RequestBody Map<String, String> payload, HttpSession session) {
+        User currentUser = (User) session.getAttribute("user");
+        if (currentUser == null) return Map.of("success", false, "msg", "未登录");
+
+        User dbUser = userRepository.findById(currentUser.getId()).orElse(null);
+        if (dbUser != null) {
+            dbUser.setNickname(payload.get("nickname"));
+            dbUser.setSignature(payload.get("signature"));
+            dbUser.setTags(payload.get("tags"));
+            dbUser.setAddress(payload.get("address"));
+
+            if ("true".equals(payload.get("verify"))) {
+                if (!dbUser.isVerified()) {
+                    dbUser.setVerified(true);
+                    dbUser.setCreditScore(dbUser.getCreditScore() + 20);
+                }
+            }
+
+            userRepository.save(dbUser);
+            session.setAttribute("user", dbUser);
+            return Map.of("success", true, "msg", "资料已更新");
+        }
+        return Map.of("success", false, "msg", "用户不存在");
+    }
 }

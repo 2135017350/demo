@@ -24,17 +24,21 @@ public class Item {
     private BigDecimal price;
     private String seller;
 
-    private String coverUrl; // 封面图路径
+    private String coverUrl;
 
-    @ElementCollection // 存储多图
+    @ElementCollection
     private List<String> detailImages = new ArrayList<>();
 
     private String videoUrl;
-    private String condition; // 全新/二手
+
+    // RENAME field to itemCondition to match index.html and avoid SQL keyword
+    @Column(name = "item_condition")
+    private String itemCondition;
+
     private String accessories;
     private String serialNum;
 
-    private Integer status; // 0:在售
+    private Integer status;
 
     private boolean isVerified;
     private String verifyReport;

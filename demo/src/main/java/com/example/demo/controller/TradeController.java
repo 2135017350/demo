@@ -3,7 +3,6 @@ package com.example.demo.controller;
 import com.example.demo.model.Item;
 import com.example.demo.model.User;
 import com.example.demo.repository.ItemRepository;
-import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,7 +17,6 @@ import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -32,34 +30,40 @@ public class TradeController {
     @Value("${app.upload.dir}")
     private String uploadDir;
 
-    // 初始化默认商品
-    @PostConstruct
-    public void init() {
-        // 创建上传目录
-        new File(uploadDir).mkdirs();
-
-        if (itemRepository.count() == 0) {
-            Item item = new Item();
-            item.setTitle("初音未来 2024 魔法未来 手办");
-            item.setCategory("手办");
-            item.setIp("VOCALOID");
-            item.setPrice(new BigDecimal("998.00"));
-            item.setSeller("System");
-            item.setCoverUrl("https://placeholder.co/300x300?text=Miku");
-            item.setCondition("全新");
-            item.setAccessories("盒说全");
-            item.setStatus(0);
-            itemRepository.save(item);
-        }
-    }
-
+    /**
+     * 首页 - 支持筛选和搜索
+     * @param category 分类 (可选)
+     * @param keyword 搜索关键词 (可选)
+     */
     @GetMapping("/")
-    public String index(Model model, HttpSession session) {
+    public String index(
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String keyword,
+            Model model,
+            HttpSession session) {
+
         User user = (User) session.getAttribute("user");
         model.addAttribute("user", user);
-        // 查询未售出(2)且未下架(4)的商品
-        List<Item> activeItems = itemRepository.findByStatusNotAndStatusNot(2, 4);
-        model.addAttribute("items", activeItems);
+
+        // 处理空字符串参数（前端传空串时转为null）
+        if (category != null && category.isEmpty()) category = null;
+        if (keyword != null && keyword.isEmpty()) keyword = null;
+
+        List<Item> items;
+        // 如果有筛选条件，使用高级查询
+        if (category != null || keyword != null) {
+            items = itemRepository.searchItems(category, keyword);
+        } else {
+            // 否则显示所有在售/预售商品
+            items = itemRepository.findByStatusNotAndStatusNot(2, 4);
+        }
+
+        model.addAttribute("items", items);
+
+        // 回显当前的筛选状态，用于前端高亮按钮
+        model.addAttribute("currentCategory", category);
+        model.addAttribute("currentKeyword", keyword);
+
         return "index";
     }
 
@@ -81,7 +85,6 @@ public class TradeController {
         return "publish";
     }
 
-    // === 发布商品接口 (支持文件上传) ===
     @PostMapping("/api/trade/publish")
     @ResponseBody
     public Map<String, Object> publishItem(
@@ -100,25 +103,28 @@ public class TradeController {
         if (user == null) return Map.of("success", false, "msg", "未登录", "needLogin", true);
 
         try {
-            // 1. 保存图片文件
+            File dir = new File(uploadDir);
+            if (!dir.exists()) dir.mkdirs();
+
             String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
             Path path = Paths.get(uploadDir + "/" + fileName);
             Files.write(path, file.getBytes());
-            String fileUrl = "/uploads/" + fileName; // 访问路径
+            String fileUrl = "/uploads/" + fileName;
 
-            // 2. 保存商品到数据库
             Item item = new Item();
             item.setTitle(title);
             item.setIp(ip);
             item.setCategory(category);
-            item.setCondition(condition);
+
+            // 修复点：使用 setItemCondition
+            item.setItemCondition(condition);
+
             item.setAccessories(accessories);
             item.setPrice(price);
             item.setDescription(description);
             item.setStatus(status);
-
             item.setSeller(user.getNickname());
-            item.setCoverUrl(fileUrl); // 使用上传后的路径
+            item.setCoverUrl(fileUrl);
             item.setVerified(false);
 
             itemRepository.save(item);
@@ -130,5 +136,25 @@ public class TradeController {
         }
     }
 
-    // buyItem 略，逻辑改为 itemRepository.findById(id) 并 save()
+    @PostMapping("/api/trade/buy")
+    @ResponseBody
+    public Map<String, Object> buyItem(@RequestBody Map<String, Long> payload, HttpSession session) {
+        User user = (User) session.getAttribute("user");
+        if (user == null) {
+            return Map.of("success", false, "msg", "请先登录后再购买！", "needLogin", true);
+        }
+
+        Long itemId = payload.get("itemId");
+        Item targetItem = itemRepository.findById(itemId).orElse(null);
+
+        if (targetItem == null) return Map.of("success", false, "msg", "商品不存在");
+        if (targetItem.getStatus() != 0 && targetItem.getStatus() != 3) {
+            return Map.of("success", false, "msg", "商品当前不可购买");
+        }
+
+        targetItem.setStatus(1);
+        itemRepository.save(targetItem);
+
+        return Map.of("success", true, "msg", "交易请求已发送，买家：" + user.getNickname());
+    }
 }
