@@ -1,0 +1,34 @@
+:root {
+    --anime-pink: #ff8fa3;
+    --anime-pink-hover: #ff6b81;
+}
+
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #fcfcfc;
+}
+
+.text-pink {
+    color: var(--anime-pink-hover) !important;
+}
+
+.btn-pink {
+    background-color: var(--anime-pink);
+    border-color: var(--anime-pink);
+    color: white;
+}
+
+.btn-pink:hover {
+    background-color: var(--anime-pink-hover);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.item-img {
+    height: 200px;
+    object-fit: cover;
+}
+
+.bg-pink-gradient {
+    background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+}
